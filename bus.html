@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Online Bus Booking System</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #4e54c8, #8f94fb);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            font-weight: bold;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 10px;
+            box-sizing: border-box;
+        }
+
+        input {
+            background: #fff;
+            color: #000;
+        }
+
+        button {
+            background: #4e54c8;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #8f94fb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #seatMap {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .seat {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            background: #4e54c8;
+            cursor: pointer;
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+
+        .seat:hover {
+            transform: scale(1.1);
+        }
+
+        .seat.booked {
+            background: #ff4d4d;
+            cursor: not-allowed;
+        }
+
+        .seat.selected {
+            background: #32cd32;
+        }
+
+        .aisle {
+            width: 50px;
+            height: 50px;
+            visibility: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loginForm">
+            <h2>Login & Personal Details</h2>
+            <label>Name: <input type="text" id="name" required></label>
+            <label>Email: <input type="email" id="email" required></label>
+            <label>Phone: <input type="text" id="phone" required></label>
+            <button onclick="submitLogin()">Next</button>
+        </div>
+
+        <div id="journeyForm" class="hidden">
+            <h2>Journey Details</h2>
+            <label>Date: <input type="date" id="date" required></label>
+            <label>Arrival Point: <input type="text" id="arrival" required></label>
+            <label>Destination Point: <input type="text" id="destination" required></label>
+            <button onclick="findBuses()">Find Buses</button>
+        </div>
+
+        <div id="busList" class="hidden">
+            <h2>Available Buses</h2>
+            <ul id="busOptions"></ul>
+        </div>
+
+        <div id="seatSelection" class="hidden">
+            <h2>Select Your Seat</h2>
+            <div id="seatMap"></div>
+            <button onclick="processPayment()">Proceed to Payment</button>
+        </div>
+
+        <div id="paymentSection" class="hidden">
+            <h2>Payment</h2>
+            <label>Total Amount: ₹500</label>
+            <label>Card Number: <input type="text" id="cardNumber" required></label>
+            <label>Expiry Date: <input type="text" id="expiry" required></label>
+            <label>CVV: <input type="text" id="cvv" required></label>
+            <button onclick="confirmBooking()">Confirm Payment</button>
+        </div>
+
+        <div id="confirmation" class="hidden">
+            <h2>Booking Confirmed!</h2>
+            <p>Your seat has been successfully booked.</p>
+        </div>
+    </div>
+
+    <script>
+        const busData = {
+            "agra-lucknow": [
+                { name: 'Lucknow Travels', departure: '07:00 AM', arrival: '01:00 PM' },
+                { name: 'Sharma Express', departure: '09:00 AM', arrival: '03:00 PM' },
+                { name: 'Royal Buses', departure: '11:00 AM', arrival: '05:00 PM' }
+            ],
+            "jaipur-jodhpur": [
+                { name: 'Desert Travels', departure: '06:00 AM', arrival: '12:00 PM' },
+                { name: 'Rajputana Rides', departure: '08:00 AM', arrival: '02:00 PM' },
+                { name: 'Marwar Express', departure: '10:00 AM', arrival: '04:00 PM' }
+            ],
+            "delhi-haridwar": [
+                { name: 'Ganga Travels', departure: '05:00 AM', arrival: '10:00 AM' },
+                { name: 'Haridwar Express', departure: '07:00 AM', arrival: '12:00 PM' },
+                { name: 'Shatabdi Tours', departure: '09:00 AM', arrival: '02:00 PM' }
+            ],
+            "mumbai-goa": [
+                { name: 'Konkan Express', departure: '06:00 AM', arrival: '04:00 PM' },
+                { name: 'Coastal Travels', departure: '08:00 AM', arrival: '06:00 PM' },
+                { name: 'Sunshine Tours', departure: '10:00 AM', arrival: '08:00 PM' }
+            ]
+        };
+
+        function submitLogin() {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('journeyForm').classList.remove('hidden');
+        }
+
+        function findBuses() {
+            const arrival = document.getElementById('arrival').value.toLowerCase();
+            const destination = document.getElementById('destination').value.toLowerCase();
+            const routeKey = `${arrival}-${destination}`;
+
+            const busOptions = document.getElementById('busOptions');
+            busOptions.innerHTML = '';
+
+            if (busData[routeKey]) {
+                busData[routeKey].forEach(bus => {
+                    const li = document.createElement('li');
+                    li.textContent = `${bus.name} - Departure: ${bus.departure}, Arrival: ${bus.arrival}`;
+                    busOptions.appendChild(li);
+                });
+                document.getElementById('busList').classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
