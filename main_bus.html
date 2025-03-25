@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Online Bus Booking System</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #4e54c8, #8f94fb);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            font-weight: bold;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 10px;
+            box-sizing: border-box;
+        }
+
+        input {
+            background: #fff;
+            color: #000;
+        }
+
+        button {
+            background: #4e54c8;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #8f94fb;
+        }
+
+        .hidden {
+            display: none;
+        }
+#seatMap {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr); /* 6 columns */
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+
+        .seat {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            background: #4e54c8;
+            cursor: pointer;
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+
+        .seat:hover {
+            transform: scale(1.1);
+        }
+
+        .seat.booked {
+            background: #ff4d4d;
+            cursor: not-allowed;
+        }
+
+        .seat.selected {
+            background: #32cd32;
+        }
+
+        .aisle {
+            width: 50px;
+            height: 50px;
+            visibility: hidden;
+        }
+
+        .payment-methods input {
+            margin-right: 10px;
+        }
+
+        .payment-methods {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card-details, .upi-details {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loginForm">
+            <h2>Login & Personal Details</h2>
+            <label>Name: <input type="text" id="name" required></label>
+            <label>Email: <input type="email" id="email" required></label>
+            <label>Phone: <input type="text" id="phone" required></label>
+            <button onclick="submitLogin()">Next</button>
+        </div>
+
+        <div id="journeyForm" class="hidden">
+            <h2>Journey Details</h2>
+            <label>Date: <input type="date" id="date" required></label>
+            <label>Arrival Point: <input type="text" id="arrival" required></label>
+            <label>Destination Point: <input type="text" id="destination" required></label>
+            <button onclick="findBuses()">Find Buses</button>
+        </div>
+
+        <div id="busList" class="hidden">
+            <h2>Available Buses</h2>
+            <ul id="busOptions"></ul>
+        </div>
+
+        <div id="seatSelection" class="hidden">
+            <h2>Select Your Seat</h2>
+            <div id="seatMap"></div>
+            <button onclick="processPayment()">Proceed to Payment</button>
+        </div>
+
+        <div id="paymentSection" class="hidden">
+            <h2>Payment</h2>
+
+            <!-- Payment Method Selection -->
+            <div class="payment-methods">
+                <label>
+                    <input type="radio" name="paymentMethod" value="card" onclick="togglePaymentForm('card')" checked>
+                    Card
+                </label>
+                <label>
+                    <input type="radio" name="paymentMethod" value="upi" onclick="togglePaymentForm('upi')">
+                    UPI
+                </label>
+            </div>
+
+            <!-- Card Payment Details -->
+            <div class="card-details">
+                <label>Total Amount: ₹500</label>
+                <label>Card Number: <input type="text" id="cardNumber" required></label>
+                <label>Expiry Date: <input type="text" id="expiry" required></label>
+                <label>CVV: <input type="text" id="cvv" required></label>
+            </div>
+
+            <!-- UPI Payment Details -->
+            <div class="upi-details">
+                <label>Total Amount: ₹500</label>
+                <label>UPI ID: <input type="text" id="upiId" required></label>
+            </div>
+
+            <button onclick="confirmBooking()">Confirm Payment</button>
+        </div>
+
+        <div id="confirmation" class="hidden">
+            <h2>Booking Confirmed!</h2>
+            <p>Your seat has been successfully booked.</p>
+        </div>
+    </div>
+
+    <script>
+        function submitLogin() {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('journeyForm').classList.remove('hidden');
+        }
+
+        function findBuses() {
+            document.getElementById('journeyForm').classList.add('hidden');
+            document.getElementById('busList').classList.remove('hidden');
+
+            const busOptions = document.getElementById('busOptions');
+            busOptions.innerHTML = '';
+
+            ['Agarwal Travels', 'Sharma Express', 'Royal Bus Lines'].forEach((bus, i) => {
+                const li = document.createElement('li');
+                li.innerHTML = `${bus} - ${8 + i}:00 AM <button onclick="selectBus(${i + 1})">Select</button>`;
+                busOptions.appendChild(li);
+            });
+        }
+
+        function selectBus(busId) {
+            document.getElementById('busList').classList.add('hidden');
+            document.getElementById('seatSelection').classList.remove('hidden');
+            generateSeatMap();
+        }
+
+        function generateSeatMap() {
+            const seatMap = document.getElementById('seatMap');
+            seatMap.innerHTML = '';
+
+            for (let i = 0; i < 40; i++) {
+                if (i % 5 === 2) {
+                    const aisle = document.createElement('div');
+                    aisle.className = 'aisle';
+                    seatMap.appendChild(aisle);
+                }
+                const seat = document.createElement('div');
+                seat.className = 'seat';
+                seat.innerText = i + 1;
+                seat.onclick = () => seat.classList.toggle('selected');
+                seatMap.appendChild(seat);
+            }
+        }
+
+        function processPayment() {
+            document.getElementById('seatSelection').classList.add('hidden');
+            document.getElementById('paymentSection').classList.remove('hidden');
+        }
+
+        function togglePaymentForm(method) {
+            if (method === 'card') {
+                document.querySelector('.card-details').style.display = 'block';
+                document.querySelector('.upi-details').style.display = 'none';
+            } else if (method === 'upi') {
+                document.querySelector('.card-details').style.display = 'none';
+                document.querySelector('.upi-details').style.display = 'block';
+            }
+        }
+
+        function confirmBooking() {
+            document.getElementById('paymentSection').classList.add('hidden');
+            document.getElementById('confirmation').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
